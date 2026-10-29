@@ -1,0 +1,14 @@
+{
+    "configurations": [
+        {
+            "type": "java",
+            "name": "Spring Boot-SadApplication<ro.uaic.sad-sad-librarie>",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "mainClass": "ro.uaic.sad.SadApplication",
+            "projectName": "ro.uaic.sad-sad-librarie",
+            "args": "",
+            "envFile": "${workspaceFolder}/.env"
+        }
+    ]
+}

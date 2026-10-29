@@ -1,0 +1,117 @@
+@import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;0,700;1,500&family=Nunito:wght@400;600;700&display=swap');
+
+:root {
+  /* Cozy Bookish Backgrounds */
+  --bg: #f5f0e6;       /* Crem cald, ca o pagină de carte veche */
+  --card: #fdfcfb;     /* Alb "murdar" pentru carduri, să nu obosească ochii */
+  --ink: #292524;      /* Espresso închis pentru text (mai blând decât negru pur) */
+  --mut: #78716c;      /* Gri cald pentru text secundar */
+  --bd: #d6d3d1;       /* Contururi subtile */
+  
+  /* Northern Lights Accents (Culorile Brandului) */
+  --blue: #0f766e;     /* Teal intens (Aurore) - culoarea principală pentru butoane/navigație */
+  --g: #059669;        /* Verde smarald (Satisfăcător) */
+  --y: #d97706;        /* Chihlimbar / Lumina de lampă (Avertizare) */
+  --r: #b91c1c;        /* Roșu stins (Nesatisfăcător) */
+}
+
+* { box-sizing: border-box; }
+
+body { 
+  margin: 0; 
+  font: 14px/1.5 'Nunito', system-ui, -apple-system, sans-serif; 
+  background: var(--bg); 
+  color: var(--ink); 
+}
+
+h1, h2, h3, h4 { 
+  font-family: 'Lora', serif; /* Font elegant de carte pentru titluri */
+  font-weight: 700;
+}
+
+h1 { margin: 0; font-size: 24px; color: var(--blue); } /* Titlul principal în culoarea aurorei */
+
+.app { max-width:1500px; margin:0 auto; padding:12px 16px 60px }
+header { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px } header span { color:var(--mut); font-size:12px }
+.filters { display:flex; flex-wrap:wrap; gap:10px; align-items:end; background:var(--card); padding:10px 12px; border-radius:10px; border:1px solid var(--bd) }
+label { display:flex; flex-direction:column; font-size:11px; color:var(--mut); gap:2px } label.inline { flex-direction:row; align-items:center; gap:6px; font-size:12px }
+select,input[type=month],input[type=number] { padding:5px 6px; border:1px solid var(--bd); border-radius:6px; font-size:13px; background:#fff } input[type=number] { width:60px }
+button { padding:7px 12px; border:0; border-radius:7px; background:var(--blue); color:#fff; cursor:pointer; font-size:13px } button:disabled { opacity:.5 }
+button.ghost { background:transparent; color:var(--ink); border:1px solid var(--bd) } button.link { background:none; color:var(--blue); padding:0 }
+.presets { display:flex; gap:4px } nav { display:flex; gap:4px; margin:12px 0; flex-wrap:wrap } nav button { background:#fff; color:var(--ink); border:1px solid var(--bd) } nav button.active { background:var(--blue); color:#fff }
+.card { background:var(--card); border:1px solid var(--bd); border-radius:10px; padding:14px; margin-bottom:14px } .cardhead { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px } .card h3 { margin:0; font-size:16px } h4 { margin:12px 0 6px }
+.kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:10px; margin-bottom:14px } .kpi { background:var(--card); border:1px solid var(--bd); border-radius:10px; padding:12px }
+.kl { color:var(--mut); font-size:12px } .kv { font-size:22px; font-weight:700; margin:2px 0 } .kd { font-size:12px; color:var(--mut) } .kd.up { color:var(--g) } .kd.down { color:var(--r) }
+.two { display:grid; grid-template-columns:minmax(0,1.5fr) minmax(0,1fr); gap:14px } @media(max-width:1000px){ .two { grid-template-columns:1fr } }
+.gridwrap { overflow:auto; max-height:560px } table.grid { width:100%; border-collapse:collapse; font-size:13px } .grid th { position:sticky; top:0; background:#f5f0e6; text-align:left; padding:7px 8px; border-bottom:2px solid var(--bd); cursor:pointer; white-space:nowrap }
+.grid td { padding:6px 8px; border-bottom:1px solid var(--bd) } .r { text-align:right } tr.click { cursor:pointer } tr.click:hover td { filter:brightness(.96) }
+tr.row-green td:first-child { border-left:5px solid var(--g) } tr.row-yellow td:first-child { border-left:5px solid var(--y) } tr.row-red td:first-child { border-left:5px solid var(--r) }
+tr.row-green { background:#f0fdf4 } tr.row-yellow { background:#fffbeb } tr.row-red { background:#fef2f2 }
+.badge { display:inline-block; padding:2px 8px; border-radius:99px; font-size:11px; font-weight:600; color:#fff } .badge.green { background:var(--g) } .badge.yellow { background:var(--y) } .badge.red { background:var(--r) }
+.note { color:var(--mut); font-size:12px; margin:8px 0 } .note.err { color:var(--r) } .crumbs { margin-bottom:8px }
+.progress { position:relative; height:26px; background:#e5e7eb; border-radius:6px; overflow:hidden; margin:10px 0 } .progress .bar { height:100%; background:var(--blue); transition:width .4s } .progress span { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:12px; color:#111 }
+.overlay { position:fixed; inset:0; background:#0006; display:grid; place-items:center; z-index:50 } .modal { background:#fff; border-radius:12px; padding:20px; width:min(440px,90vw) } .actions { display:flex; justify-content:flex-end; gap:8px; margin-top:14px }
+.weights { display:flex; flex-wrap:wrap; gap:16px; align-items:end; margin-bottom:8px } .slider input { width:170px }
+.chips { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px } .chip { padding:4px 10px; border-radius:99px; color:#fff; cursor:grab; font-size:12px } .chip.green { background:var(--g) } .chip.yellow { background:var(--y) } .chip.red { background:var(--r) }
+.zones { display:grid; grid-template-columns:repeat(3,1fr); gap:12px } .zone { min-height:150px; border:2px dashed var(--bd); border-radius:10px; padding:8px } .zone h4 { margin:0 0 6px } .zone.green { background:#f0fdf4 } .zone.yellow { background:#fffbeb } .zone.red { background:#fef2f2 } .planitem { background:#fff; border:1px solid var(--bd); border-radius:6px; padding:4px 8px; margin:4px 0 }
+.bell { background:#fff; color:var(--ink); border:1px solid var(--bd) } .alertpanel { background:#fff; border:1px solid var(--bd); border-radius:10px; padding:8px; margin-bottom:10px; max-height:240px; overflow:auto }
+.alert { padding:5px 8px; margin:3px 0; border-radius:6px; border-left:4px solid } .alert.danger { background:#fef2f2; border-color:var(--r) } .alert.warning { background:#fffbeb; border-color:var(--y) } .alert.success { background:#f0fdf4; border-color:var(--g) } .alert.info { background:#eff6ff; border-color:var(--blue) }
+.toasts { position:fixed; right:16px; bottom:48px; display:flex; flex-direction:column; gap:8px; z-index:60 } .toast { background:#fff; border-left:5px solid var(--blue); padding:8px 12px; border-radius:8px; box-shadow:0 4px 14px #0003; max-width:340px; font-size:12px } .toast.danger { border-color:var(--r) } .toast.warning { border-color:var(--y) } .toast.success { border-color:var(--g) }
+footer { position:fixed; left:0; right:0; bottom:0; background:#292524; color:#d6d3d1; font-size:12px; padding:6px 16px }
+
+/* =========================================
+   Hover & Focus Effects (Cozy Aurora)
+========================================= */
+
+/* Efecte pentru butoanele principale (se luminează și se ridică fin) */
+button:not(:disabled) {
+  transition: all 0.2s ease-in-out;
+}
+button:not(:disabled):hover {
+  filter: brightness(1.15);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px rgba(15, 118, 110, 0.2);
+}
+
+/* Efecte pentru butoanele ghost și navigația inactivă (fundal crem ușor mai închis) */
+button.ghost:not(:disabled):hover,
+nav button:not(.active):hover {
+  background: #e7e5e4; /* Nuanță neutră de piatră/crem */
+  transform: translateY(0);
+  box-shadow: none;
+  filter: none;
+}
+
+/* Navigația activă primește efectul luminos pe hover */
+nav button.active:hover {
+  filter: brightness(1.15);
+}
+
+/* Hover și Focus pentru Input-uri și Select-uri (Filtre) */
+select, input[type=month], input[type=number], input[type=range] {
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+select:hover, input[type=month]:hover, input[type=number]:hover {
+  border-color: var(--blue);
+}
+
+select:focus, input[type=month]:focus, input[type=number]:focus {
+  border-color: var(--blue);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.15); /* Halou subtil de culoarea aurorei */
+}
+
+/* Hover pe tabele (Grid) pentru o mai bună vizibilitate a rândului selectat */
+tr.click {
+  transition: background-color 0.2s ease;
+}
+tr.click:hover td {
+  background-color: #e7e5e4; 
+  filter: none;
+}
+
+/* Verde smarald pentru sliderele din tab-ul Decision */
+input[type=range] {
+  accent-color: #059669; /* Forțează verde smarald pe thumb/track */
+}
