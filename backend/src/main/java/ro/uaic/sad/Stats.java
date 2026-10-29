@@ -1,11 +1,11 @@
 // Stats.java
 package ro.uaic.sad;
 
-/** Utilitare statistice simple pentru estimari. */
+/** Simple statistical utilities for estimates. */
 public final class Stats {
     private Stats() {}
 
-    /** Regresie liniara y = a + b*x (x = 0..n-1). Returneaza {a, b}. */
+    /** Linear regression y = a + b*x (x = 0..n-1). Returns {a, b}. */
     public static double[] regress(double[] y) {
         int n = y.length;
         if (n < 2) return new double[]{n == 1 ? y[0] : 0, 0};
@@ -22,7 +22,7 @@ public final class Stats {
         return v.length < 2 ? 0 : Math.sqrt(s / (v.length - 1));
     }
 
-    /** Medie mobila pe fereastra w (fereastra se micsoreaza la inceput). */
+    /** Moving average over window w (the window shrinks at the beginning). */
     public static double[] movingAvg(double[] v, int w) {
         double[] r = new double[v.length];
         for (int i = 0; i < v.length; i++) { double s = 0; int c = 0; for (int j = Math.max(0, i - w + 1); j <= i; j++) { s += v[j]; c++; } r[i] = s / c; }

@@ -8,7 +8,7 @@ import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
-/** Toata logica analitica (agregari SQL + estimari). Aplicatie de suport decizional: doar citire. */
+/** All analytics logic (SQL aggregations + estimates). Decision support application: read-only. */
 @Service
 public class AnalyticsService {
     private final JdbcTemplate db;
@@ -17,7 +17,7 @@ public class AnalyticsService {
     // ---------- helpers SQL ----------
     private static final String JOINS = " FROM fact_sales f JOIN book b ON b.sku=f.sku JOIN subcategory sc ON sc.subcategory_id=b.subcategory_id "
             + "JOIN category cat ON cat.category_id=sc.category_id JOIN seg ON seg.subcategory_id=b.subcategory_id ";
-    // "seg" = ponderea segmentului de clienti (gen/varsta/studii) in cheltuiala fiecarei subcategorii; 1 daca nu e filtrat
+    // "seg" = customer segment share (gender/age/education) of each subcategory's spending; 1 if unfiltered
     private static final String REV = "(f.revenue*seg.share)", UNITS = "(f.units*seg.share)", COST = "(f.cost*seg.share)";
 
     private List<Map<String, Object>> run(String select, Filters f, String from, String to, String extraWhere, String tail, Object... extra) {
@@ -58,7 +58,7 @@ public class AnalyticsService {
 
     static String status(double var, double good, double bad) { return var >= good ? "green" : var >= bad ? "yellow" : "red"; }
 
-    // ---------- filtre (combo box-uri populate din SQL) ----------
+    // ---------- filters (combo boxes populated from SQL) ----------
     public Map<String, Object> filters() {
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("stores", db.queryForList("SELECT store_id AS id, name FROM store WHERE store_id<>'ONLINE' ORDER BY store_id"));
@@ -71,7 +71,7 @@ public class AnalyticsService {
         return m;
     }
 
-    // ---------- KPI: perioada vs referinta ----------
+    // ---------- KPI: period vs. reference ----------
     private Map<String, Object> kpis(Filters f, String from, String to) {
         var t = run("SUM(" + REV + ") AS rev, SUM(" + UNITS + ") AS units, SUM(" + COST + ") AS cost", f, from, to, "", "").get(0);
         List<Object> a = new ArrayList<>(List.of(from, to));
@@ -95,12 +95,12 @@ public class AnalyticsService {
         return Map.of("period", p, "current", cur, "reference", ref, "variation", var, "timestamp", LocalDateTime.now().toString());
     }
 
-    // ---------- trend + previziune ----------
+    // ---------- trend + forecast ----------
     private double[] seasonalIndex(Filters f, String expr) {
         Map<String, Double> all = monthly(f, minYm(), maxYm(), expr);
         double[] sum = new double[12]; int[] cnt = new int[12]; double tot = 0; int n = 0;
         for (var e : all.entrySet()) {
-            if (e.getKey().startsWith("2020")) continue; // excludem anul COVID din indicii de sezonalitate
+            if (e.getKey().startsWith("2020")) continue; // Exclude the COVID year from seasonality indices
             int mth = Integer.parseInt(e.getKey().substring(5)) - 1; sum[mth] += e.getValue(); cnt[mth]++; tot += e.getValue(); n++;
         }
         double avg = n == 0 ? 1 : tot / n; double[] idx = new double[12];
@@ -108,7 +108,7 @@ public class AnalyticsService {
         return idx;
     }
 
-    /** Previziune: regresie liniara pe ultimele 36 luni deseasonalizate x indice de sezonalitate. */
+    /** Forecast: linear regression on the last 36 deseasonalized months, scaled by the seasonality index. */
     private List<Map<String, Object>> forecast(Filters f, int horizon) {
         String mx = maxYm(); double[] idx = seasonalIndex(f, REV);
         Map<String, Double> hist = monthly(f, Filters.shift(mx, -35), mx, REV);
@@ -140,7 +140,7 @@ public class AnalyticsService {
         return Map.of("points", pts, "slopePerMonth", r2(ab[1]), "avg", r2(Stats.mean(y)));
     }
 
-    // ---------- drill-down categorie -> subcategorie -> titlu ----------
+    // ---------- category -> subcategory -> title drill-down ----------
     public Map<String, Object> drill(Filters f, String level, String parent, double good, double bad) {
         var p = f.resolve(maxYm());
         String id, name, extra = ""; Object[] args = new Object[0];
@@ -166,7 +166,7 @@ public class AnalyticsService {
         return Map.of("level", level, "rows", rows, "total", r2(total));
     }
 
-    // ---------- geografie clienti: provincie -> regiune -> cartier ----------
+    // ---------- customer geography: province -> region -> neighborhood ----------
     public Map<String, Object> geo(Filters f, String level, String parent) {
         String grp = switch (level) { case "region" -> "n.region"; case "neighborhood" -> "n.name"; default -> "n.province"; };
         List<Object> a = new ArrayList<>(); StringBuilder w = new StringBuilder(" WHERE 1=1");
@@ -189,7 +189,7 @@ public class AnalyticsService {
         return Map.of("level", level, "rows", out);
     }
 
-    // ---------- segmente clienti x categorii + asocieri (lift) ----------
+    // ---------- customer segments x categories + associations (lift) ----------
     public Map<String, Object> segments(Filters f, String by) {
         String col = switch (by) { case "age" -> "cu.age_group"; case "education" -> "cu.education"; default -> "cu.gender"; };
         String w = f.store() != null ? " WHERE cu.home_store=?" : ""; Object[] a = f.store() != null ? new Object[]{f.store()} : new Object[0];
@@ -214,17 +214,17 @@ public class AnalyticsService {
         return Map.of("chart", chart, "categories", db.queryForList("SELECT name FROM category ORDER BY name").stream().map(r -> r.get("name")).toList(), "lifts", lifts);
     }
 
-    // ---------- varfuri / caderi, sezonalitate, evenimente ----------
+    // ---------- peaks / declines, seasonality, events ----------
     public Map<String, Object> peaks(Filters f) {
         var p = f.resolve(maxYm()); Map<String, Double> cur = monthly(f, p.from(), p.to(), REV); List<String> ms = months(p.from(), p.to());
         double[] y = ms.stream().mapToDouble(m -> cur.getOrDefault(m, 0.0)).toArray(); double mean = Stats.mean(y), sd = Stats.std(y);
         List<Map<String, Object>> list = new ArrayList<>();
         for (int i = 0; i < y.length; i++) {
-            String t = y[i] > mean + 0.5 * sd ? "Vârf" : y[i] < mean - 0.5 * sd ? "Cădere" : "Normal";
-            list.add(Map.of("ym", ms.get(i), "revenue", r2(y[i]), "vsAvgPct", r2(Stats.pct(y[i], mean)), "type", t, "status", t.equals("Vârf") ? "green" : t.equals("Cădere") ? "red" : "yellow"));
+            String t = y[i] > mean + 0.5 * sd ? "Peak" : y[i] < mean - 0.5 * sd ? "Decline" : "Normal";
+            list.add(Map.of("ym", ms.get(i), "revenue", r2(y[i]), "vsAvgPct", r2(Stats.pct(y[i], mean)), "type", t, "status", t.equals("Peak") ? "green" : t.equals("Decline") ? "red" : "yellow"));
         }
-        double[] idx = seasonalIndex(f, REV); String[] nm = {"Ian", "Feb", "Mar", "Apr", "Mai", "Iun", "Iul", "Aug", "Sep", "Oct", "Nov", "Dec"}; List<Map<String, Object>> seas = new ArrayList<>();
-        for (int i = 0; i < 12; i++) seas.add(Map.of("month", nm[i], "index", r2(idx[i]), "advice", idx[i] < 0.93 ? "Lună slabă: recomandat campanie promoțională" : idx[i] > 1.07 ? "Sezon de vârf: asigură stocul" : "Normal",
+        double[] idx = seasonalIndex(f, REV); String[] nm = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"}; List<Map<String, Object>> seas = new ArrayList<>();
+        for (int i = 0; i < 12; i++) seas.add(Map.of("month", nm[i], "index", r2(idx[i]), "advice", idx[i] < 0.93 ? "" : idx[i] > 1.07 ? "Peak season: secure stock" : "Normal",
                 "status", idx[i] < 0.93 ? "red" : idx[i] > 1.07 ? "green" : "yellow"));
         return Map.of("months", list, "seasonality", seas, "avg", r2(mean));
     }
@@ -249,7 +249,7 @@ public class AnalyticsService {
         return out;
     }
 
-    // ---------- promotii: elasticitate masurata + simulare ----------
+    // ---------- promotions: measured elasticity + simulation ----------
     private double units(String from, String to, Integer sub) {
         String sql = "SELECT COALESCE(SUM(f.units),0) FROM fact_sales f JOIN book b ON b.sku=f.sku WHERE f.ym BETWEEN ? AND ?" + (sub != null ? " AND b.subcategory_id=?" : "");
         return sub != null ? db.queryForObject(sql, Double.class, from, to, sub) : db.queryForObject(sql, Double.class, from, to);
@@ -260,9 +260,9 @@ public class AnalyticsService {
         for (var p : db.queryForList("SELECT p.name, p.subcategory_id AS sub, sc.name AS subName, p.start_date AS s, p.end_date AS e, p.discount_pct AS d FROM promotion p LEFT JOIN subcategory sc ON sc.subcategory_id=p.subcategory_id ORDER BY p.start_date")) {
             String a = ((String) p.get("s")).substring(0, 7), b = ((String) p.get("e")).substring(0, 7); Integer sub = p.get("sub") == null ? null : ((Number) p.get("sub")).intValue();
             double u = units(a, b, sub), ly = units(Filters.shift(a, -12), Filters.shift(b, -12), sub);
-            double all = units(a, b, null) / Math.max(1, units(Filters.shift(a, -12), Filters.shift(b, -12), null)); // crestere generala (corectie)
+            double all = units(a, b, null) / Math.max(1, units(Filters.shift(a, -12), Filters.shift(b, -12), null)); // Overall growth (adjustment)
             double lift = (u / Math.max(1, ly)) / all - 1, disc = d(p.get("d")) / 100, el = disc == 0 ? 0 : lift / disc;
-            Map<String, Object> o = new LinkedHashMap<>(); o.put("name", p.get("name")); o.put("subcategory", p.get("subName") == null ? "Toate" : p.get("subName")); o.put("subId", sub);
+            Map<String, Object> o = new LinkedHashMap<>(); o.put("name", p.get("name")); o.put("subcategory", p.get("subName") == null ? "All" : p.get("subName")); o.put("subId", sub);
             o.put("start", a); o.put("discountPct", d(p.get("d"))); o.put("liftPct", r2(lift * 100)); o.put("elasticity", r2(el));
             o.put("status", el >= 1.5 ? "green" : el >= 0.8 ? "yellow" : "red"); out.add(o);
         }
@@ -278,7 +278,7 @@ public class AnalyticsService {
         o.put("sim", scenario(rev, u, cost, el, discountPct / 100)); List<Map<String, Object>> curve = new ArrayList<>();
         for (int x = 0; x <= 40; x += 5) { var s = scenario(rev, u, cost, el, x / 100.0); curve.add(Map.of("discount", x, "revenue", s.get("revenue"), "margin", s.get("margin"))); }
         o.put("curve", curve); double dm = d(((Map<?, ?>) o.get("sim")).get("margin")) - d(((Map<?, ?>) o.get("base")).get("margin"));
-        o.put("verdict", dm >= 0 ? "Reducerea crește marja estimată: recomandată" : "Reducerea scade marja estimată: nerecomandată la acest nivel");
+        o.put("verdict", dm >= 0 ? "The discount increases estimated margin: recommended" : "The discount decreases estimated margin: not recommended at this level");
         o.put("status", dm >= 0 ? "green" : "red"); return o;
     }
 
@@ -293,7 +293,7 @@ public class AnalyticsService {
         return Math.min(6, Math.max(0.3, Double.isNaN(own) ? all : own));
     }
 
-    // ---------- previziune de aprovizionare pe subcategorii ----------
+    // ---------- supply forecast by subcategory ----------
     public Map<String, Object> supply(Filters f, int horizon) {
         String mx = maxYm(); var rows = run("sc.subcategory_id AS sid, sc.name AS name, f.ym AS ym, SUM(" + UNITS + ") AS u, SUM(" + COST + ") AS c", f, minYm(), mx, "", "GROUP BY 1,2,3");
         Map<String, Map<String, double[]>> m = new TreeMap<>(); for (var r : rows) m.computeIfAbsent((String) r.get("name"), k -> new HashMap<>()).put((String) r.get("ym"), new double[]{d(r.get("u")), d(r.get("c"))});
@@ -317,7 +317,7 @@ public class AnalyticsService {
         return Map.of("rows", out, "safetyStockPct", 10, "forecast", forecast(f, horizon));
     }
 
-    // ---------- decizie multi-criteriu ----------
+    // ---------- multi-criteria decision ----------
     private record Agg(String id, String name, String cat, double rev, double prev, double cost, double r3, double p3) {}
 
     private List<Agg> aggregates(Filters f) {
@@ -347,10 +347,10 @@ public class AnalyticsService {
         for (int i = 0; i < n; i++) {
             Agg a = ag.get(i); double score = (ng[i] * wg + nm[i] * wm + ns[i] * ws + nmo[i] * wmo) / wt;
             String action, why;
-            if (g[i] < 0 && mg[i] < medM) { action = "Retragere / reducere stoc"; why = "Vânzări în scădere și marjă sub mediană"; }
-            else if (g[i] >= medG && mg[i] >= medM) { action = "Extinde stocul și promovează"; why = "Creștere și marjă peste mediană"; }
-            else if (mg[i] >= medM) { action = "Campanie de promovare"; why = "Marjă bună, dar creștere sub mediană"; }
-            else { action = "Menține / negociază costuri"; why = "Creștere bună, marjă sub mediană"; }
+            if (g[i] < 0 && mg[i] < medM) { action = "Withdraw / reduce stock"; why = "Declining sales and below-median margin"; }
+            else if (g[i] >= medG && mg[i] >= medM) { action = "Expand stock and promote"; why = "Above-median growth and margin"; }
+            else if (mg[i] >= medM) { action = "Promotional campaign"; why = "Good margin, but below-median growth"; }
+            else { action = "Maintain / negotiate costs"; why = "Good growth, below-median margin"; }
             Map<String, Object> o = new LinkedHashMap<>(); o.put("id", a.id()); o.put("name", a.name()); o.put("category", a.cat()); o.put("revenue", r2(a.rev()));
             o.put("growthPct", r2(g[i])); o.put("marginPct", r2(mg[i])); o.put("sharePct", r2(sh[i])); o.put("momentumPct", r2(mo[i])); o.put("score", r2(score));
             o.put("status", score >= 60 ? "green" : score >= 40 ? "yellow" : "red"); o.put("action", action); o.put("rationale", why); out.add(o);
@@ -366,12 +366,12 @@ public class AnalyticsService {
         List<Map<String, Object>> out = new ArrayList<>();
         for (Agg a : aggregates(f)) {
             double mo = Stats.pct(a.r3(), a.p3()), mg = a.rev() == 0 ? 0 : (a.rev() - a.cost()) / a.rev() * 100;
-            if (mo <= -15) out.add(Map.of("level", "danger", "title", "Cădere vânzări: " + a.name(), "message", String.format(Locale.US, "Ultimele 3 luni: %.1f%% față de anul trecut.", mo)));
-            else if (mo >= 15) out.add(Map.of("level", "success", "title", "Creștere: " + a.name(), "message", String.format(Locale.US, "Ultimele 3 luni: +%.1f%% față de anul trecut. Verifică stocul.", mo)));
-            if (mg < 40) out.add(Map.of("level", "warning", "title", "Marjă scăzută: " + a.name(), "message", String.format(Locale.US, "Marja pe ultimele 12 luni este %.1f%%.", mg)));
+            if (mo <= -15) out.add(Map.of("level", "danger", "title", "Sales decline: " + a.name(), "message", String.format(Locale.US, "Last 3 months: %.1f%% compared to last year.", mo)));
+            else if (mo >= 15) out.add(Map.of("level", "success", "title", "Growth: " + a.name(), "message", String.format(Locale.US, "Last 3 months: +%.1f%% compared to last year. Check stock levels.", mo)));
+            if (mg < 40) out.add(Map.of("level", "warning", "title", "Low margin: " + a.name(), "message", String.format(Locale.US, "Margin over the last 12 months is %.1f%%.", mg)));
         }
         for (var e : db.queryForList("SELECT name, start_date AS s FROM event WHERE start_date>? AND start_date<=? ORDER BY start_date LIMIT 3", maxYm() + "-31", Filters.shift(maxYm(), 3) + "-31"))
-            out.add(Map.of("level", "info", "title", "Eveniment apropiat: " + e.get("name"), "message", "Începe la " + e.get("s") + ". Planifică stocul și promoțiile."));
+            out.add(Map.of("level", "info", "title", "Upcoming event: " + e.get("name"), "message", "Starts on " + e.get("s") + ". Plan stock and promotions."));
         return out;
     }
 }

@@ -4,7 +4,7 @@ package ro.uaic.sad;
 import java.time.YearMonth;
 import java.util.Map;
 
-/** Filtrele globale trimise de interfata. Perioada = luni "YYYY-MM"; null = nefiltrat. */
+/** Global filters provided by the interface. Period = month in "YYYY-MM" format; null = unfiltered. */
 public record Filters(String from, String to, String refFrom, String refTo, String store, String channel,
                       String category, String gender, String ageGroup, String education) {
 
@@ -15,7 +15,7 @@ public record Filters(String from, String to, String refFrom, String refTo, Stri
                 n(m.get("channel")), n(m.get("category")), n(m.get("gender")), n(m.get("ageGroup")), n(m.get("education")));
     }
 
-    /** Perioada rezolvata: curenta + de referinta (implicit: perioada anterioara de aceeasi lungime). */
+    /** Resolved period: current + reference (by default, the previous period of the same length). */
     public record Period(String from, String to, String refFrom, String refTo, int months) {}
 
     public static String shift(String ym, int months) { return YearMonth.parse(ym).plusMonths(months).toString(); }

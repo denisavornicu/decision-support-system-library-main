@@ -11,7 +11,7 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 public class SadApplication {
     public static void main(String[] args) { SpringApplication.run(SadApplication.class, args); }
 
-    /** CORS pentru frontend-ul Vite (localhost:5173). */
+    /** CORS for the Vite frontend (localhost:5173). */
     @Bean
     public WebMvcConfigurer cors() {
         return new WebMvcConfigurer() {
