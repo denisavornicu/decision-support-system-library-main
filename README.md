@@ -1,4 +1,4 @@
-# SAD Librărie — Northern Lights Book Co. (Tema VII, SAD-BI)
+# Librărie: Northern Lights Book Co. (Tema VII, SAD-BI)
 
 Aplicație de **suport decizional**. Java (Spring Boot) + SQLite + React/Recharts.
 
